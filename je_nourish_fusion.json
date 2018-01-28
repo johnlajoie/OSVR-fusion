@@ -7,7 +7,11 @@
 	"interfaces": {
 		"tracker": {
 			"position": true,
-			"orientation": true,
+            "orientation": true,
+            "linearVelocity":  true,
+            "angularVelocity":  false,
+            "linearAcceleration":  true,
+            "angularAcceleration":  false, 
 			"count": 1
 		}
 	}
