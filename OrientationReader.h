@@ -17,7 +17,7 @@ namespace je_nourish_fusion {
 		SingleOrientationReader(OSVR_ClientContext ctx, std::string orientation_path);
 		OSVR_ReturnCode update(OSVR_PoseState& pose, OSVR_VelocityState& vel, OSVR_AccelerationState& acc, OSVR_TimeValue* timeValue);
 	protected:
-		OSVR_ClientInterface m_orientation;
+		OSVR_ClientInterface m_orientationInterface;
 	};
 
 	class CombinedOrientationReader : public IOrientationReader {
@@ -25,7 +25,7 @@ namespace je_nourish_fusion {
 		CombinedOrientationReader(OSVR_ClientContext ctx, Json::Value orientation_paths);
 		OSVR_ReturnCode update(OSVR_PoseState& pose, OSVR_VelocityState& vel, OSVR_AccelerationState& acc, OSVR_TimeValue* timeValue);
 	protected:
-		OSVR_ClientInterface m_orientations[3];
+		OSVR_ClientInterface m_orientationInterfaces[3];
 	};
 
 	class FilteredOrientationReader : public IOrientationReader {
@@ -36,7 +36,7 @@ namespace je_nourish_fusion {
 		double m_yaw_offset;
 		osvr::clientkit::ClientContext m_ctx;
 	protected:
-		OSVR_ClientInterface m_orientations[4];
+		OSVR_ClientInterface m_orientationInterfaces[4];
 		bool m_do_instant_reset;
 		bool m_do_soft_reset;
 		OSVR_ClientInterface m_instant_reset_path;

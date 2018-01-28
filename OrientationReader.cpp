@@ -21,23 +21,23 @@ namespace je_nourish_fusion {
 	}
 
 	SingleOrientationReader::SingleOrientationReader(OSVR_ClientContext ctx, std::string orientation_path) {
-		osvrClientGetInterface(ctx, orientation_path.c_str(), &m_orientation);
+		osvrClientGetInterface(ctx, orientation_path.c_str(), &m_orientationInterface);
 	}
 	OSVR_ReturnCode SingleOrientationReader::update(OSVR_PoseState& pose, OSVR_VelocityState& vel, OSVR_AccelerationState& acc, OSVR_TimeValue* timeValue) {
-		return osvrGetOrientationState(m_orientation, timeValue, &pose.rotation);
+		return osvrGetOrientationState(m_orientationInterface, timeValue, &pose.rotation);
 	}
 
 	CombinedOrientationReader::CombinedOrientationReader(OSVR_ClientContext ctx, Json::Value orientation_paths) {
-		osvrClientGetInterface(ctx, orientation_paths["roll"].asCString(), &(m_orientations[0]));
-		osvrClientGetInterface(ctx, orientation_paths["pitch"].asCString(), &(m_orientations[1]));
-		osvrClientGetInterface(ctx, orientation_paths["yaw"].asCString(), &(m_orientations[2]));
+		osvrClientGetInterface(ctx, orientation_paths["roll"].asCString(), &(m_orientationInterfaces[0]));
+		osvrClientGetInterface(ctx, orientation_paths["pitch"].asCString(), &(m_orientationInterfaces[1]));
+		osvrClientGetInterface(ctx, orientation_paths["yaw"].asCString(), &(m_orientationInterfaces[2]));
 	}
 
 	FilteredOrientationReader::FilteredOrientationReader(OSVR_ClientContext ctx, Json::Value orientation_paths) : m_ctx(ctx) {
-		osvrClientGetInterface(ctx, orientation_paths["roll"].asCString(), &(m_orientations[0]));
-		osvrClientGetInterface(ctx, orientation_paths["pitch"].asCString(), &(m_orientations[1]));
-		osvrClientGetInterface(ctx, orientation_paths["yawFast"].asCString(), &(m_orientations[2]));
-		osvrClientGetInterface(ctx, orientation_paths["yawAccurate"].asCString(), &(m_orientations[3]));
+		osvrClientGetInterface(ctx, orientation_paths["roll"].asCString(), &(m_orientationInterfaces[0]));
+		osvrClientGetInterface(ctx, orientation_paths["pitch"].asCString(), &(m_orientationInterfaces[1]));
+		osvrClientGetInterface(ctx, orientation_paths["yawFast"].asCString(), &(m_orientationInterfaces[2]));
+		osvrClientGetInterface(ctx, orientation_paths["yawAccurate"].asCString(), &(m_orientationInterfaces[3]));
 		m_alpha = orientation_paths["alpha"].asDouble();
 		m_do_soft_reset = orientation_paths["softReset"].asBool();
 		if (orientation_paths["recenterButton"].isNull()) {
@@ -54,6 +54,7 @@ namespace je_nourish_fusion {
 		}
 
 		m_last_yaw = 0;
+		m_yaw_offset = 0;
 		m_reset_press_time = osvr::util::time::getNow();
 
 		m_ctx.log(OSVR_LogLevel::OSVR_LOGLEVEL_INFO, "Initialized a complementary fusion filter.");
@@ -76,9 +77,9 @@ namespace je_nourish_fusion {
 		OSVR_OrientationState orientation_y;
 		OSVR_OrientationState orientation_z;
 
-		OSVR_ReturnCode xret = osvrGetOrientationState(m_orientations[0], timeValue, &orientation_x);
-		OSVR_ReturnCode yret = osvrGetOrientationState(m_orientations[1], timeValue, &orientation_y);
-		OSVR_ReturnCode zret = osvrGetOrientationState(m_orientations[2], timeValue, &orientation_z);
+		OSVR_ReturnCode xret = osvrGetOrientationState(m_orientationInterfaces[0], timeValue, &orientation_x);
+		OSVR_ReturnCode yret = osvrGetOrientationState(m_orientationInterfaces[1], timeValue, &orientation_y);
+		OSVR_ReturnCode zret = osvrGetOrientationState(m_orientationInterfaces[2], timeValue, &orientation_z);
 
 		OSVR_Vec3 rpy_x;
 		OSVR_Vec3 rpy_y;
@@ -104,10 +105,10 @@ namespace je_nourish_fusion {
 		OSVR_OrientationState orientation_z;
 		OSVR_AngularVelocityState angular_v;
 
-		OSVR_ReturnCode xret = osvrGetOrientationState(m_orientations[0], timeValue, &orientation_x);
-		OSVR_ReturnCode yret = osvrGetOrientationState(m_orientations[1], timeValue, &orientation_y);
-		OSVR_ReturnCode zret = osvrGetOrientationState(m_orientations[3], timeValue, &orientation_z);
-		OSVR_ReturnCode angret = osvrGetAngularVelocityState(m_orientations[2], timeValue, &angular_v);
+		OSVR_ReturnCode xret = osvrGetOrientationState(m_orientationInterfaces[0], timeValue, &orientation_x);
+		OSVR_ReturnCode yret = osvrGetOrientationState(m_orientationInterfaces[1], timeValue, &orientation_y);
+		OSVR_ReturnCode zret = osvrGetOrientationState(m_orientationInterfaces[3], timeValue, &orientation_z);
+		OSVR_ReturnCode angret = osvrGetAngularVelocityState(m_orientationInterfaces[2], timeValue, &angular_v);
 
 		OSVR_Vec3 rpy_x;
 		OSVR_Vec3 rpy_y;
@@ -186,6 +187,15 @@ namespace je_nourish_fusion {
 		osvrVec3SetX(&rpy, osvrVec3GetX(&rpy_x));
 		osvrVec3SetY(&rpy, osvrVec3GetY(&rpy_y));
 		osvrVec3SetZ(&rpy, z_out - m_yaw_offset);
+
+		//static int i = 0;
+		//if (i > 1000) {
+		//	std::cout << "Fast: " << z_fast << "Accurate: " << z_accurate << "\n";
+		//	std::cout << "Final: " << (z_out - m_yaw_offset) << "\n";
+		//	std::cout.flush();
+		//	i = 0;
+		//}
+		//++i;
 
 		quaternionFromRPY(&rpy, &pose.rotation);
 
