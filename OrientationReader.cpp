@@ -23,8 +23,8 @@ namespace je_nourish_fusion {
 	SingleOrientationReader::SingleOrientationReader(OSVR_ClientContext ctx, std::string orientation_path) {
 		osvrClientGetInterface(ctx, orientation_path.c_str(), &m_orientation);
 	}
-	OSVR_ReturnCode SingleOrientationReader::update(OSVR_OrientationState* orientation, OSVR_TimeValue* timeValue) {
-		return osvrGetOrientationState(m_orientation, timeValue, orientation);
+	OSVR_ReturnCode SingleOrientationReader::update(OSVR_PoseState& pose, OSVR_VelocityState& vel, OSVR_AccelerationState& acc, OSVR_TimeValue* timeValue) {
+		return osvrGetOrientationState(m_orientation, timeValue, &pose.rotation);
 	}
 
 	CombinedOrientationReader::CombinedOrientationReader(OSVR_ClientContext ctx, Json::Value orientation_paths) {
@@ -71,7 +71,7 @@ namespace je_nourish_fusion {
 	}
 
 
-	OSVR_ReturnCode CombinedOrientationReader::update(OSVR_OrientationState* orientation, OSVR_TimeValue* timeValue) {
+	OSVR_ReturnCode CombinedOrientationReader::update(OSVR_PoseState& pose, OSVR_VelocityState& vel, OSVR_AccelerationState& acc, OSVR_TimeValue* timeValue) {
 		OSVR_OrientationState orientation_x;
 		OSVR_OrientationState orientation_y;
 		OSVR_OrientationState orientation_z;
@@ -93,12 +93,12 @@ namespace je_nourish_fusion {
 		osvrVec3SetY(&rpy, osvrVec3GetY(&rpy_y));
 		osvrVec3SetZ(&rpy, osvrVec3GetZ(&rpy_z));
 
-		quaternionFromRPY(&rpy, orientation);
+		quaternionFromRPY(&rpy, &pose.rotation);
 
 		return OSVR_RETURN_SUCCESS;
 	}
 
-	OSVR_ReturnCode FilteredOrientationReader::update(OSVR_OrientationState* orientation, OSVR_TimeValue* timeValue) {
+	OSVR_ReturnCode FilteredOrientationReader::update(OSVR_PoseState& pose, OSVR_VelocityState& vel, OSVR_AccelerationState& acc, OSVR_TimeValue* timeValue) {
 		OSVR_OrientationState orientation_x;
 		OSVR_OrientationState orientation_y;
 		OSVR_OrientationState orientation_z;
@@ -187,7 +187,7 @@ namespace je_nourish_fusion {
 		osvrVec3SetY(&rpy, osvrVec3GetY(&rpy_y));
 		osvrVec3SetZ(&rpy, z_out - m_yaw_offset);
 
-		quaternionFromRPY(&rpy, orientation);
+		quaternionFromRPY(&rpy, &pose.rotation);
 
 		return OSVR_RETURN_SUCCESS;
 	}

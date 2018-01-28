@@ -7,7 +7,7 @@ namespace je_nourish_fusion {
 	class FusionDevice {
 	public:
 		FusionDevice(OSVR_PluginRegContext ctx, Json::Value config) {
-			osvrPose3SetIdentity(&m_state);
+			osvrPose3SetIdentity(&m_pose);
 
 			m_useTimestamp = config.isMember("timestamp");
 			m_usePositionTimestamp = m_useTimestamp && config["timestamp"].asString().compare("position") == 0;
@@ -64,12 +64,12 @@ namespace je_nourish_fusion {
 			OSVR_TimeValue timeValuePosition;
 			OSVR_TimeValue timeValueOrientation;
 
-			m_positionReader->update(&m_state.translation, &timeValuePosition);
-			m_orientationReader->update(&m_state.rotation, &timeValueOrientation);
+			m_positionReader->update(m_pose, m_vel, m_acc, &timeValuePosition);
+			m_orientationReader->update(m_pose, m_vel, m_acc, &timeValueOrientation);
 
 			if (m_useOffset) {
-				Eigen::Quaterniond rotation = osvr::util::fromQuat(m_state.rotation);
-				Eigen::Map<Eigen::Vector3d> translation = osvr::util::vecMap(m_state.translation);
+				Eigen::Quaterniond rotation = osvr::util::fromQuat(m_pose.rotation);
+				Eigen::Map<Eigen::Vector3d> translation = osvr::util::vecMap(m_pose.translation);
 
 				translation += rotation._transformVector(osvr::util::vecMap(m_offset));
 			}
@@ -102,7 +102,7 @@ namespace je_nourish_fusion {
 				// Handle flip
 				if (m_isFlipped) {
 					Eigen::Map<Eigen::Vector3d> originTranslation = osvr::util::vecMap(m_flipOrigin);
-					Eigen::Map<Eigen::Vector3d> deviceTranslation = osvr::util::vecMap(m_state.translation);
+					Eigen::Map<Eigen::Vector3d> deviceTranslation = osvr::util::vecMap(m_pose.translation);
 					
 					Eigen::Vector3d flippedTranslation(2 * originTranslation.x() - deviceTranslation.x(),
 						deviceTranslation.y(),
@@ -117,20 +117,22 @@ namespace je_nourish_fusion {
 					osvrQuatSetZ(&rotateQ, 0);
 
 					Eigen::Quaterniond rotateQ_eigen = osvr::util::fromQuat(rotateQ);
-					Eigen::Quaterniond deviceQ_eigen = osvr::util::fromQuat(m_state.rotation);
+					Eigen::Quaterniond deviceQ_eigen = osvr::util::fromQuat(m_pose.rotation);
 
 					Eigen::Quaterniond hmdRotation = rotateQ_eigen * deviceQ_eigen;
 
-					osvr::util::toQuat(hmdRotation, m_state.rotation);
+					osvr::util::toQuat(hmdRotation, m_pose.rotation);
 				}
 			}
 
 			if (m_useTimestamp) {
 				OSVR_TimeValue timeValue = m_usePositionTimestamp ? timeValuePosition : timeValueOrientation;
-				osvrDeviceTrackerSendPoseTimestamped(*m_dev, m_tracker, &m_state, 0, &timeValue);
+				osvrDeviceTrackerSendPoseTimestamped(*m_dev, m_tracker, &m_pose, 0, &timeValue);
+				osvrDeviceTrackerSendVelocityTimestamped(*m_dev, m_tracker, &m_vel, 0, &timeValue);
+				osvrDeviceTrackerSendAccelerationTimestamped(*m_dev, m_tracker, &m_acc, 0, &timeValue);
 			}
 			else {
-				osvrDeviceTrackerSendPose(*m_dev, m_tracker, &m_state, 0);
+				osvrDeviceTrackerSendPose(*m_dev, m_tracker, &m_pose, 0);
 			}
 
 			return OSVR_RETURN_SUCCESS;
@@ -141,12 +143,14 @@ namespace je_nourish_fusion {
 		IOrientationReader* m_orientationReader;
 
 		OSVR_ClientContext m_ctx;
-		OSVR_ClientInterface m_position;
-		OSVR_ClientInterface m_orientation;
+		OSVR_ClientInterface m_positionInterface;
+		OSVR_ClientInterface m_orientationInterface;
 
 		osvr::pluginkit::DeviceToken* m_dev;
 		OSVR_TrackerDeviceInterface m_tracker;
-		OSVR_PoseState m_state;
+		OSVR_PoseState m_pose;
+		OSVR_VelocityState m_vel;
+		OSVR_AccelerationState m_acc;
 
 		bool m_useOffset;
 		OSVR_Vec3 m_offset;
