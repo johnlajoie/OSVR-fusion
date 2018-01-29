@@ -103,7 +103,7 @@ namespace je_nourish_fusion {
 				if (m_isFlipped) {
 					Eigen::Map<Eigen::Vector3d> originTranslation = osvr::util::vecMap(m_flipOrigin);
 					Eigen::Map<Eigen::Vector3d> deviceTranslation = osvr::util::vecMap(m_pose.translation);
-					
+
 					Eigen::Vector3d flippedTranslation(2 * originTranslation.x() - deviceTranslation.x(),
 						deviceTranslation.y(),
 						2 * originTranslation.z() - deviceTranslation.z());
@@ -122,6 +122,14 @@ namespace je_nourish_fusion {
 					Eigen::Quaterniond hmdRotation = rotateQ_eigen * deviceQ_eigen;
 
 					osvr::util::toQuat(hmdRotation, m_pose.rotation);
+
+					Eigen::Map<Eigen::Vector3d> deviceVelocity = osvr::util::vecMap(m_vel.linearVelocity);
+					Eigen::Map<Eigen::Vector3d> deviceAcceleration = osvr::util::vecMap(m_acc.linearAcceleration);
+
+					osvrVec3SetX(&m_vel.linearVelocity, -1.0f * deviceVelocity.x());
+					osvrVec3SetZ(&m_vel.linearVelocity, -1.0f * deviceVelocity.z());
+					osvrVec3SetX(&m_acc.linearAcceleration, -1.0f * deviceAcceleration.x());
+					osvrVec3SetZ(&m_acc.linearAcceleration, -1.0f * deviceAcceleration.z());
 				}
 			}
 
