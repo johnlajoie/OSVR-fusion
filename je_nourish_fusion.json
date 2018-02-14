@@ -6,12 +6,12 @@
 	"lastModified": "2016-06-25T21:13:07.585Z",
 	"interfaces": {
 		"tracker": {
-			"position": true,
+		 "position": true,
             "orientation": true,
             "linearVelocity":  true,
-            "angularVelocity":  false,
+            "angularVelocity":  true,
             "linearAcceleration":  true,
-            "angularAcceleration":  false, 
+            "angularAcceleration":  true, 
 			"count": 1
 		}
 	}
