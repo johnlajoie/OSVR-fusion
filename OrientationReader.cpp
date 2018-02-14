@@ -24,7 +24,10 @@ namespace je_nourish_fusion {
 		osvrClientGetInterface(ctx, orientation_path.c_str(), &m_orientationInterface);
 	}
 	OSVR_ReturnCode SingleOrientationReader::update(OSVR_PoseState& pose, OSVR_VelocityState& vel, OSVR_AccelerationState& acc, OSVR_TimeValue* timeValue) {
-		return osvrGetOrientationState(m_orientationInterface, timeValue, &pose.rotation);
+		OSVR_ReturnCode rret = osvrGetOrientationState(m_orientationInterface, timeValue, &pose.rotation);
+		OSVR_ReturnCode avret = osvrGetAngularVelocityState(m_orientationInterface, timeValue, &vel.angularVelocity);
+		OSVR_ReturnCode aaret = osvrGetAngularAccelerationState(m_orientationInterface, timeValue, &acc.angularAcceleration);
+		return (OSVR_ReturnCode) (rret && avret && aaret);
 	}
 
 	CombinedOrientationReader::CombinedOrientationReader(OSVR_ClientContext ctx, Json::Value orientation_paths) {

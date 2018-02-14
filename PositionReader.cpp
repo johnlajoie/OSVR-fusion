@@ -22,10 +22,8 @@ namespace je_nourish_fusion {
 	OSVR_ReturnCode SinglePositionReader::update(OSVR_PoseState& pose, OSVR_VelocityState& vel, OSVR_AccelerationState& acc, OSVR_TimeValue* timeValue) {
 		OSVR_ReturnCode pret = osvrGetPositionState(m_positionInterface, timeValue, &pose.translation);
 		OSVR_ReturnCode vret = osvrGetLinearVelocityState(m_positionInterface, timeValue, &vel.linearVelocity);
-		OSVR_ReturnCode avret = osvrGetAngularVelocityState(m_positionInterface, timeValue, &vel.angularVelocity);
 		OSVR_ReturnCode aret = osvrGetLinearAccelerationState(m_positionInterface, timeValue, &acc.linearAcceleration);
-		OSVR_ReturnCode aaret = osvrGetAngularAccelerationState(m_positionInterface, timeValue, &acc.angularAcceleration);
-		return (OSVR_ReturnCode)(pret && vret && avret && aret && aaret);
+		return (OSVR_ReturnCode)(pret && vret && aret);
 	}
 
 	CombinedPositionReader::CombinedPositionReader(OSVR_ClientContext ctx, Json::Value position_paths) {
@@ -78,24 +76,6 @@ namespace je_nourish_fusion {
 		else
 			vel.linearVelocityValid = false;
 
-		// angular velocity - only if x,y,z are from the same interface!
-
-		if ((m_positionInterfaces[0] == m_positionInterfaces[1]) && (m_positionInterfaces[0] == m_positionInterfaces[2])){
-
-			OSVR_AngularVelocityState avel_x;
-			xret = osvrGetAngularVelocityState(m_positionInterfaces[0], timeValue, &avel_x);
-
-			if (xret == OSVR_RETURN_SUCCESS) {
-				vel.angularVelocity.incrementalRotation = avel_x.incrementalRotation;
-				vel.angularVelocity.dt = avel_x.dt;
-				vel.angularVelocityValid = true;
-			}
-			else{
-				vel.angularVelocityValid = false;
-			}
-
-		}
-
 		// acceleration
 
 		OSVR_AccelerationState acc_x;
@@ -121,25 +101,6 @@ namespace je_nourish_fusion {
 		}
 		else
 			acc.linearAccelerationValid = false;
-
-		// angular acceleration - only if x,y,z are from the same interface!
-
-		if ((m_positionInterfaces[0] == m_positionInterfaces[1]) && (m_positionInterfaces[0] == m_positionInterfaces[2])){
-
-			OSVR_AngularAccelerationState aacc_x;
-			xret = osvrGetAngularAccelerationState(m_positionInterfaces[0], timeValue, &aacc_x);
-
-			if (xret == OSVR_RETURN_SUCCESS) {
-				acc.angularAcceleration.incrementalRotation = aacc_x.incrementalRotation;
-				acc.angularAcceleration.dt = aacc_x.dt;
-				acc.angularAccelerationValid = true;
-			}
-			else{
-				acc.angularAccelerationValid = false;
-			}
-
-		}
-
 
 		return OSVR_RETURN_SUCCESS;
 	}
