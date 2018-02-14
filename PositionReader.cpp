@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <iostream>
 
 namespace je_nourish_fusion {
 
@@ -21,8 +22,10 @@ namespace je_nourish_fusion {
 	OSVR_ReturnCode SinglePositionReader::update(OSVR_PoseState& pose, OSVR_VelocityState& vel, OSVR_AccelerationState& acc, OSVR_TimeValue* timeValue) {
 		OSVR_ReturnCode pret = osvrGetPositionState(m_positionInterface, timeValue, &pose.translation);
 		OSVR_ReturnCode vret = osvrGetLinearVelocityState(m_positionInterface, timeValue, &vel.linearVelocity);
+		OSVR_ReturnCode avret = osvrGetAngularVelocityState(m_positionInterface, timeValue, &vel.angularVelocity);
 		OSVR_ReturnCode aret = osvrGetLinearAccelerationState(m_positionInterface, timeValue, &acc.linearAcceleration);
-		return (OSVR_ReturnCode)(pret && vret && aret);
+		OSVR_ReturnCode aaret = osvrGetAngularAccelerationState(m_positionInterface, timeValue, &acc.angularAcceleration);
+		return (OSVR_ReturnCode)(pret && vret && avret && aret && aaret);
 	}
 
 	CombinedPositionReader::CombinedPositionReader(OSVR_ClientContext ctx, Json::Value position_paths) {
@@ -49,6 +52,8 @@ namespace je_nourish_fusion {
 			osvrVec3SetZ(&pose.translation, osvrVec3GetZ(&position_z));
 		}
 
+		// velocity
+
 		OSVR_VelocityState vel_x;
 		OSVR_VelocityState vel_y;
 		OSVR_VelocityState vel_z;
@@ -67,9 +72,31 @@ namespace je_nourish_fusion {
 			osvrVec3SetZ(&vel.linearVelocity, osvrVec3GetZ(&vel_z.linearVelocity));
 		}
 
-		if (vel_x.linearVelocityValid || vel_y.linearVelocityValid || vel_z.linearVelocityValid) {
+		if (vel_x.linearVelocityValid && vel_y.linearVelocityValid && vel_z.linearVelocityValid) {
 			vel.linearVelocityValid = true;
 		}
+		else
+			vel.linearVelocityValid = false;
+
+		// angular velocity - only if x,y,z are from the same interface!
+
+		if ((m_positionInterfaces[0] == m_positionInterfaces[1]) && (m_positionInterfaces[0] == m_positionInterfaces[2])){
+
+			OSVR_AngularVelocityState avel_x;
+			xret = osvrGetAngularVelocityState(m_positionInterfaces[0], timeValue, &avel_x);
+
+			if (xret == OSVR_RETURN_SUCCESS) {
+				vel.angularVelocity.incrementalRotation = avel_x.incrementalRotation;
+				vel.angularVelocity.dt = avel_x.dt;
+				vel.angularVelocityValid = true;
+			}
+			else{
+				vel.angularVelocityValid = false;
+			}
+
+		}
+
+		// acceleration
 
 		OSVR_AccelerationState acc_x;
 		OSVR_AccelerationState acc_y;
@@ -89,9 +116,30 @@ namespace je_nourish_fusion {
 			osvrVec3SetZ(&acc.linearAcceleration, osvrVec3GetZ(&acc_z.linearAcceleration));
 		}
 
-		if (acc_x.linearAccelerationValid || acc_y.linearAccelerationValid || acc_z.linearAccelerationValid) {
+		if (acc_x.linearAccelerationValid && acc_y.linearAccelerationValid && acc_z.linearAccelerationValid) {
 			acc.linearAccelerationValid = true;
 		}
+		else
+			acc.linearAccelerationValid = false;
+
+		// angular acceleration - only if x,y,z are from the same interface!
+
+		if ((m_positionInterfaces[0] == m_positionInterfaces[1]) && (m_positionInterfaces[0] == m_positionInterfaces[2])){
+
+			OSVR_AngularAccelerationState aacc_x;
+			xret = osvrGetAngularAccelerationState(m_positionInterfaces[0], timeValue, &aacc_x);
+
+			if (xret == OSVR_RETURN_SUCCESS) {
+				acc.angularAcceleration.incrementalRotation = aacc_x.incrementalRotation;
+				acc.angularAcceleration.dt = aacc_x.dt;
+				acc.angularAccelerationValid = true;
+			}
+			else{
+				acc.angularAccelerationValid = false;
+			}
+
+		}
+
 
 		return OSVR_RETURN_SUCCESS;
 	}
