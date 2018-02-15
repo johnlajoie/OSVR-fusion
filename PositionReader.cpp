@@ -22,8 +22,10 @@ namespace je_nourish_fusion {
 	OSVR_ReturnCode SinglePositionReader::update(OSVR_PoseState& pose, OSVR_VelocityState& vel, OSVR_AccelerationState& acc, OSVR_TimeValue* timeValue) {
 		OSVR_ReturnCode pret = osvrGetPositionState(m_positionInterface, timeValue, &pose.translation);
 		OSVR_ReturnCode vret = osvrGetLinearVelocityState(m_positionInterface, timeValue, &vel.linearVelocity);
+		if (vret == OSVR_RETURN_SUCCESS) vel.linearVelocityValid = true; else vel.linearVelocityValid = false;
 		OSVR_ReturnCode aret = osvrGetLinearAccelerationState(m_positionInterface, timeValue, &acc.linearAcceleration);
-		return (OSVR_ReturnCode)(pret && vret && aret);
+		if (aret == OSVR_RETURN_SUCCESS) acc.linearAccelerationValid = true; else acc.linearAccelerationValid = false;
+		return (OSVR_ReturnCode)(pret);
 	}
 
 	CombinedPositionReader::CombinedPositionReader(OSVR_ClientContext ctx, Json::Value position_paths) {
